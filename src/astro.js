@@ -51,3 +51,27 @@ export function moonPhase(date = new Date()) {
 export function localDateKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
+
+// Próximas lunas nueva y llena a partir de una fecha (fechas locales YYYY-MM-DD y días que faltan).
+export function nextMoonEvents(date = new Date(), cuantos = 4) {
+  const days = (date.getTime() - KNOWN_NEW_MOON) / 86400000;
+  const age = ((days % SYNODIC) + SYNODIC) % SYNODIC;
+  const eventos = [];
+  for (let k = 0; eventos.length < cuantos; k++) {
+    for (const [tipo, objetivo] of [['new', 0], ['full', SYNODIC / 2]]) {
+      let faltan = objetivo - age + k * SYNODIC;
+      if (faltan <= 0.5) continue; // la de hoy ya está en curso
+      const cuando = new Date(date.getTime() + faltan * 86400000);
+      eventos.push({ type: tipo, name: tipo === 'new' ? 'New Moon' : 'Full Moon', emoji: tipo === 'new' ? '🌑' : '🌕', date: localDateKey(cuando), days: Math.ceil(faltan - 0.5) });
+    }
+  }
+  const unicos = [...new Map(eventos.map((e) => [`${e.type}${e.date}`, e])).values()];
+  return unicos.sort((a, b) => a.date.localeCompare(b.date)).slice(0, cuantos);
+}
+
+// Fecha (YYYY-MM-DD) de la luna nueva con que empezó el ciclo actual: identifica el ciclo.
+export function cycleStart(date = new Date()) {
+  const days = (date.getTime() - KNOWN_NEW_MOON) / 86400000;
+  const age = ((days % SYNODIC) + SYNODIC) % SYNODIC;
+  return localDateKey(new Date(date.getTime() - age * 86400000));
+}

@@ -199,3 +199,64 @@ export function compatibility(a, b) {
       : `${a.name} and ${b.name} see the world differently — which can be magnetic when you both stay patient and kind.`;
   return { score, note };
 }
+
+// ---------- Cartas diarias: un mazo de 44 que se va coleccionando ----------
+export const CARDS = [
+  { id: 'dawn', name: 'The Dawn', emoji: '🌅', keyword: 'Beginnings', message: 'Something new is asking for a first step, not a perfect plan.' },
+  { id: 'moon', name: 'The Moon', emoji: '🌙', keyword: 'Intuition', message: 'Trust the quiet knowing that arrives before the reasons do.' },
+  { id: 'star', name: 'The Star', emoji: '⭐', keyword: 'Hope', message: 'You are allowed to hope out loud today.' },
+  { id: 'sun', name: 'The Sun', emoji: '☀️', keyword: 'Joy', message: 'Let one simple pleasure be the point of the day.' },
+  { id: 'river', name: 'The River', emoji: '🌊', keyword: 'Flow', message: 'Stop pushing against the current for a moment and see where it carries you.' },
+  { id: 'mountain', name: 'The Mountain', emoji: '⛰️', keyword: 'Patience', message: 'Slow progress is still progress. Keep climbing.' },
+  { id: 'seed', name: 'The Seed', emoji: '🌱', keyword: 'Growth', message: 'What you plant quietly now will surprise you later.' },
+  { id: 'key', name: 'The Key', emoji: '🗝️', keyword: 'Opportunity', message: 'A door you thought was locked may only be closed. Try the handle.' },
+  { id: 'mirror', name: 'The Mirror', emoji: '🪞', keyword: 'Self-worth', message: 'Look at yourself the way someone who loves you does.' },
+  { id: 'feather', name: 'The Feather', emoji: '🪶', keyword: 'Lightness', message: 'Not everything needs to be carried. Set one thing down.' },
+  { id: 'flame', name: 'The Flame', emoji: '🔥', keyword: 'Passion', message: 'Follow what makes you lose track of time.' },
+  { id: 'bridge', name: 'The Bridge', emoji: '🌉', keyword: 'Connection', message: 'Reach out first. Someone has been hoping you would.' },
+  { id: 'compass', name: 'The Compass', emoji: '🧭', keyword: 'Direction', message: 'You do not need the whole map — only the next true step.' },
+  { id: 'garden', name: 'The Garden', emoji: '🌷', keyword: 'Nurture', message: 'Tend to what you want to grow, including yourself.' },
+  { id: 'owl', name: 'The Owl', emoji: '🦉', keyword: 'Wisdom', message: 'You already know more than you are giving yourself credit for.' },
+  { id: 'butterfly', name: 'The Butterfly', emoji: '🦋', keyword: 'Change', message: 'The in-between is not wasted time. It is transformation.' },
+  { id: 'lantern', name: 'The Lantern', emoji: '🏮', keyword: 'Guidance', message: 'Be the light you were waiting for.' },
+  { id: 'crown', name: 'The Crown', emoji: '👑', keyword: 'Confidence', message: 'Walk into today like you belong there. You do.' },
+  { id: 'heart', name: 'The Heart', emoji: '💗', keyword: 'Love', message: 'Love grows in small, repeated kindnesses.' },
+  { id: 'hourglass', name: 'The Hourglass', emoji: '⏳', keyword: 'Timing', message: 'Not yet does not mean never. Your timing is your own.' },
+  { id: 'wave', name: 'The Wave', emoji: '🌬️', keyword: 'Release', message: 'Breathe out what tightened your chest this week.' },
+  { id: 'nest', name: 'The Nest', emoji: '🪺', keyword: 'Home', message: 'Make your space feel like a hug today.' },
+  { id: 'arrow', name: 'The Arrow', emoji: '🏹', keyword: 'Focus', message: 'Aim at one thing. Let the rest wait.' },
+  { id: 'shell', name: 'The Shell', emoji: '🐚', keyword: 'Listening', message: 'Listen more closely — to others and to yourself.' },
+  { id: 'rainbow', name: 'The Rainbow', emoji: '🌈', keyword: 'Promise', message: 'After the heavy days, color comes back. Watch for it.' },
+  { id: 'candle', name: 'The Candle', emoji: '🕯️', keyword: 'Stillness', message: 'Five quiet minutes can change the shape of a whole day.' },
+  { id: 'wings', name: 'The Wings', emoji: '🕊️', keyword: 'Freedom', message: 'You are allowed to leave what no longer fits.' },
+  { id: 'crystal', name: 'The Crystal', emoji: '💎', keyword: 'Clarity', message: 'Say what you actually mean. Clarity is kindness.' },
+  { id: 'path', name: 'The Path', emoji: '🛤️', keyword: 'Trust', message: 'The road bends so you can’t see too far ahead. Trust it anyway.' },
+  { id: 'bloom', name: 'The Bloom', emoji: '🌸', keyword: 'Beauty', message: 'Notice something beautiful and let it slow you down.' },
+  { id: 'anchor', name: 'The Anchor', emoji: '⚓', keyword: 'Grounding', message: 'Feel your feet on the floor. You are here, and here is enough.' },
+  { id: 'comet', name: 'The Comet', emoji: '☄️', keyword: 'Surprise', message: 'Stay open — the good thing may arrive from an unexpected direction.' },
+  { id: 'tree', name: 'The Tree', emoji: '🌳', keyword: 'Roots', message: 'Remember where you come from and how far you have grown.' },
+  { id: 'lotus', name: 'The Lotus', emoji: '🪷', keyword: 'Resilience', message: 'Beautiful things can grow from muddy places.' },
+  { id: 'bell', name: 'The Bell', emoji: '🔔', keyword: 'Awakening', message: 'Pay attention today; something is trying to get your notice.' },
+  { id: 'honey', name: 'The Honey', emoji: '🍯', keyword: 'Sweetness', message: 'Be sweet with yourself. You have earned it.' },
+  { id: 'door', name: 'The Door', emoji: '🚪', keyword: 'Threshold', message: 'You are standing at the edge of a new chapter. Step in.' },
+  { id: 'map', name: 'The Map', emoji: '🗺️', keyword: 'Vision', message: 'Write down where you want to be a year from now.' },
+  { id: 'thread', name: 'The Thread', emoji: '🧵', keyword: 'Patterns', message: 'Notice what keeps repeating. It is teaching you something.' },
+  { id: 'cup', name: 'The Cup', emoji: '🍵', keyword: 'Rest', message: 'Fill your own cup first. Then pour.' },
+  { id: 'eclipse', name: 'The Eclipse', emoji: '🌘', keyword: 'Shadow', message: 'The parts of you that you hide still deserve love.' },
+  { id: 'aurora', name: 'The Aurora', emoji: '🌌', keyword: 'Wonder', message: 'Let yourself be amazed by something today.' },
+  { id: 'wheel', name: 'The Wheel', emoji: '🎡', keyword: 'Cycles', message: 'Every season passes. Enjoy the one you are in.' },
+  { id: 'phoenix', name: 'The Phoenix', emoji: '🐦‍🔥', keyword: 'Rebirth', message: 'You have started over before, and you came back stronger.' },
+];
+
+// Carta de hoy: estable para la persona y el día; mientras falten cartas, sale una que aún no tiene.
+export function cardOfDay(profile, date = new Date(), coleccion = []) {
+  const rnd = aleatorio(hash(`card|${localDateKey(date)}|${profile?.name?.toLowerCase().trim()}|${profile?.birthday}`));
+  const faltan = CARDS.filter((c) => !coleccion.includes(c.id));
+  return elegir(rnd, faltan.length ? faltan : CARDS);
+}
+
+// ---------- Rituales de luna ----------
+export const MOON_RITUALS = {
+  new: { title: 'New Moon intentions', hint: 'A new cycle starts. Write up to three intentions for the next four weeks.', cta: 'Seal my intentions' },
+  full: { title: 'Full Moon release', hint: 'Write what you are ready to let go of. Read it once, then release it.', cta: 'Release it 🔥' },
+};

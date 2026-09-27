@@ -51,3 +51,49 @@ test('compatibility is symmetric and bounded', () => {
     assert.ok(x.score >= 50 && x.score <= 99);
   }
 });
+
+test('moon events: next new and full moons are ordered and a half cycle apart', async () => {
+  const { nextMoonEvents, cycleStart } = await import('../src/astro.js');
+  const ev = nextMoonEvents(new Date(Date.UTC(2024, 3, 10, 12)), 4); // two days after the Apr 8 2024 new moon
+  assert.equal(ev[0].type, 'full');
+  assert.equal(ev[0].date, '2024-04-23');
+  assert.equal(ev[1].type, 'new');
+  assert.ok(ev[1].date === '2024-05-07' || ev[1].date === '2024-05-08', ev[1].date);
+  assert.ok(ev.every((e, i) => i === 0 || e.date > ev[i - 1].date));
+  assert.ok(['2024-04-08', '2024-04-07'].includes(cycleStart(new Date(Date.UTC(2024, 3, 10, 12)))));
+});
+
+test('cards: 44 unique, daily card is stable and prefers ones not yet collected', async () => {
+  const { CARDS, cardOfDay } = await import('../src/contenido.js');
+  assert.equal(CARDS.length, 44);
+  assert.equal(new Set(CARDS.map((c) => c.id)).size, 44);
+  const p = { name: 'Maya', birthday: '1994-07-30' };
+  const d = new Date(2026, 8, 27, 9);
+  assert.equal(cardOfDay(p, d).id, cardOfDay(p, new Date(2026, 8, 27, 22)).id);
+  const casiTodas = CARDS.slice(1).map((c) => c.id);
+  assert.equal(cardOfDay(p, d, casiTodas).id, CARDS[0].id);
+  assert.ok(cardOfDay(p, d, CARDS.map((c) => c.id)));
+});
+
+test('streak keeps going with one rest day per week and never goes below 1', async () => {
+  const { updateStreak, newMilestone, weeklyRecap, monthStars } = await import('../src/retencion.js');
+  let s = updateStreak({}, '2026-09-21').streak; // lunes
+  assert.equal(s.count, 1);
+  s = updateStreak(s, '2026-09-22').streak;
+  const salto = updateStreak(s, '2026-09-24'); // faltó el 23: usa el descanso
+  assert.equal(salto.usedRest, true);
+  assert.equal(salto.streak.count, 3);
+  const otroSalto = updateStreak(salto.streak, '2026-09-26'); // misma semana, ya no hay descanso
+  assert.equal(otroSalto.streak.count, 1);
+  assert.equal(otroSalto.streak.best, 3);
+  assert.equal(updateStreak(otroSalto.streak, '2026-09-26').streak, otroSalto.streak);
+  assert.equal(newMilestone(7, [3]).days, 7);
+  assert.equal(newMilestone(7, [3, 7]), null);
+  const estado = { checkins: { '2026-09-27': { mood: 5, win: 'Shipped it' }, '2026-09-25': { mood: 3 }, '2026-08-30': { mood: 1 } }, cards: { '2026-09-27': 'sun' } };
+  const r = weeklyRecap(estado, '2026-09-27');
+  assert.equal(r.checkins, 2); assert.equal(r.mood.name, 'Good'); assert.deepEqual(r.wins, ['Shipped it']); assert.equal(r.cards, 1);
+  const st = monthStars(estado.checkins, '2026-09-27');
+  assert.equal(st.length, 2);
+  assert.deepEqual(monthStars(estado.checkins, '2026-09-27'), st);
+  assert.ok(st.every((x) => x.x > 0 && x.x < 100 && x.y > 0 && x.y < 100));
+});

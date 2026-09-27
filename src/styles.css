@@ -5,6 +5,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { margin: 0; padding: 0; min-height: 100%; }
+html, body { overflow-x: hidden; }
 body { background: var(--night); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
 button { font: inherit; cursor: pointer; color: inherit; }
 .app { min-height: 100vh; background: radial-gradient(ellipse at top, #2B1F52 0%, var(--night) 55%); position: relative; }
@@ -70,3 +71,74 @@ h2 { font-size: 32px; line-height: 1.1; }
 .past summary { cursor: pointer; padding: 10px 0; border-top: 1px solid var(--line); font-weight: 600; }
 .past p { font-size: 14px; }
 .score { font-family: var(--serif); font-size: 48px; color: var(--gold); margin: 6px 0 4px !important; }
+/* v2: tabs de 5 */
+.tabs button { font-size: 10.5px; }
+/* carta del día */
+.carta-zona { text-align: center; background: linear-gradient(170deg, rgba(233, 166, 192, 0.10), rgba(255, 255, 255, 0.03)); }
+.carta { position: relative; width: 190px; height: 290px; margin: 6px auto 4px; display: block; border: 0; background: none; padding: 0; perspective: 1000px; }
+.carta-cara { position: absolute; inset: 0; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+.carta-dorso { background: radial-gradient(circle at 50% 40%, #3A2A6B, #1B1238 70%); border: 1.5px solid rgba(231, 199, 123, 0.55); box-shadow: 0 16px 40px rgba(0,0,0,.45), inset 0 0 0 8px rgba(231,199,123,0.08); }
+.carta:not(.volteada) .carta-dorso { animation: latido 2.4s ease-in-out infinite; }
+.dorso-sello { font-size: 60px; color: var(--gold); text-shadow: 0 0 24px rgba(231, 199, 123, 0.8); }
+.dorso-texto { margin-top: 14px; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+.carta-frente { transform: rotateY(180deg); background: linear-gradient(165deg, #FBF3DF, #EFD9A6); color: #2A1B4F; border: 1.5px solid #E7C77B; box-shadow: 0 16px 40px rgba(231, 199, 123, 0.25); padding: 16px; }
+.carta.volteada .carta-dorso { transform: rotateY(-180deg); }
+.carta.volteada .carta-frente { transform: rotateY(0deg); }
+.carta-emoji { font-size: 76px; line-height: 1; }
+.carta-nombre { font-family: var(--serif); font-size: 28px; font-weight: 600; margin-top: 16px; }
+.carta-clave { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; margin-top: 6px; opacity: .7; }
+.carta-mensaje { animation: aparecer .6s ease both .3s; }
+.carta-mensaje .big { margin-top: 12px !important; }
+.nueva { display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #1B1238; background: var(--gold); padding: 5px 10px; border-radius: 999px; }
+@keyframes latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* avisos que llevan a otra pestaña */
+.nudge { width: 100%; display: flex; align-items: center; gap: 14px; text-align: left; color: var(--text); }
+.nudge-emoji { font-size: 30px; }
+.nudge .flecha { margin-left: auto; color: var(--gold); font-size: 20px; }
+.recap .sin-margen { margin-bottom: 0; }
+/* señales */
+.fila-input { display: flex; gap: 8px; align-items: center; }
+.fila-input .line { flex: 1; margin-top: 0; }
+.mini-btn { width: auto; margin: 0; padding: 13px 18px; }
+.senal { display: flex; gap: 8px; align-items: baseline; margin: 12px 0 0 !important; font-size: 15px; }
+.senal span { color: var(--gold); }
+.senal small { margin-left: auto; color: var(--faint); white-space: nowrap; font-size: 11px; }
+/* luna */
+.luna-card { text-align: center; }
+.luna { width: 150px; height: 150px; border-radius: 50%; margin: 6px auto 16px; position: relative; overflow: hidden; background: radial-gradient(circle at 35% 35%, #FFF8E6, #E7D7AE 60%, #C9B58A); box-shadow: 0 0 60px rgba(255, 236, 190, 0.35); }
+.luna-sombra { position: absolute; inset: -2px; border-radius: 50%; background: #120E24; opacity: .92; transition: transform .6s; }
+.ritual-luna h2 { margin: 2px 0 8px; }
+.area.quemando { animation: quemar 1.6s ease-in forwards; }
+@keyframes quemar { 0% { filter: none; } 40% { color: #FFB86B; box-shadow: 0 0 30px rgba(255, 140, 60, 0.6); } 100% { opacity: 0; transform: translateY(-30px) scale(.96); filter: blur(6px); } }
+.revisar { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.evento { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.evento:first-of-type { border-top: 0; }
+.evento-emoji { font-size: 26px; }
+.evento-dias { margin-left: auto; font-family: var(--serif); font-size: 22px; color: var(--gold); }
+/* check-in y constelación */
+.moods { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 6px 0 4px; }
+.mood { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mood span { font-size: 26px; } .mood small { font-size: 10.5px; color: var(--soft); }
+.mood.on { border-color: var(--gold); background: rgba(231, 199, 123, 0.16); }
+.checkin.hecho { border-color: rgba(231, 199, 123, 0.4); }
+.constelacion { background: radial-gradient(ellipse at 50% 0%, rgba(80, 60, 150, 0.35), rgba(255, 255, 255, 0.03)); }
+.cielo { width: 100%; height: auto; display: block; margin: 4px 0 8px; }
+.estrella-hoy { animation: brillar 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes brillar { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+/* mazo y logros */
+.mazo { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin-bottom: 10px; }
+.mini-carta { aspect-ratio: 2 / 3; border-radius: 8px; background: linear-gradient(165deg, #FBF3DF, #EFD9A6); color: #2A1B4F; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.mini-carta { min-width: 0; overflow: hidden; }
+.mini-carta span { font-size: 17px; } .mini-carta small { display: none; }
+.mini-carta.vacia { background: rgba(255, 255, 255, 0.04); border: 1px dashed var(--line); color: var(--faint); }
+.logros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.logro { border: 1px solid var(--line); border-radius: 14px; padding: 10px 4px; text-align: center; opacity: .5; }
+.logro.on { opacity: 1; border-color: rgba(231, 199, 123, 0.5); background: rgba(231, 199, 123, 0.08); }
+.logro span { font-size: 22px; display: block; } .logro b { display: block; font-size: 11px; margin-top: 4px; } .logro small { font-size: 10px; color: var(--faint); }
+/* celebración */
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(10, 6, 24, 0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 24px; animation: aparecer .3s ease both; }
+.modal-card { width: 100%; max-width: 380px; text-align: center; background: linear-gradient(170deg, #2B1F52, #1B1238); border: 1px solid rgba(231, 199, 123, 0.4); border-radius: 28px; padding: 30px 24px 24px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.badge-big { font-size: 72px; animation: latido 1.6s ease-in-out infinite; }
+.modal-card .lead { margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { .carta-cara, .carta:not(.volteada) .carta-dorso, .badge-big, .estrella-hoy { animation: none !important; transition: none !important; } }
