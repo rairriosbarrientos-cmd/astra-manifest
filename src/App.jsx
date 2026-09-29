@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { SIGNS, signFor, localDateKey, moonPhase, nextMoonEvents, cycleStart } from './astro.js';
 import { FOCUSES, dailyReading, compatibility, CARDS, cardOfDay, MOON_RITUALS } from './contenido.js';
 import { MOODS, MILESTONES, updateStreak, restAvailable, newMilestone, monthStars, weeklyRecap } from './retencion.js';
+import { supabase, sincronizarAlEntrar, subirPerfil, consultarPlus, plusGuardado, olvidarPlus } from './nube.js';
+import { CuentaModal, PlusModal, NuevaContrasena, Bloqueado, Modal } from './Cuenta.jsx';
+import { threeCardSpread, weeklyForecast, monthlyTheme, deepCompatibility, THEMES } from './plus.js';
 
 const CLAVE = 'astra:v1';
 function cargar() { try { return JSON.parse(localStorage.getItem(CLAVE)) || {}; } catch { return {}; } }
@@ -21,6 +24,75 @@ export default function App() {
   const [tab, setTab] = useState('today');
   const [celebrar, setCelebrar] = useState(null);
   const hoy = localDateKey();
+  // Cuenta opcional (respaldo) y Astra Plus.
+  const [sesion, setSesion] = useState(null);
+  const [plus, setPlus] = useState(plusGuardado);
+  const [modal, setModal] = useState(null); // 'cuenta' | 'entrar' | 'cuenta-plus' | 'plus' | 'nueva-clave' | 'bienvenida'
+  const uid = sesion?.user?.id;
+  const tienePlus = !!(uid && plus?.plus && (!plus.uid || plus.uid === uid));
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSesion(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
+      setSesion(s);
+      if (evento === 'PASSWORD_RECOVERY') setModal('nueva-clave');
+      if (evento === 'SIGNED_OUT') { olvidarPlus(); setPlus(null); }
+    });
+    // Regreso de Stripe Checkout.
+    const vuelta = new URLSearchParams(window.location.search).get('plus');
+    if (vuelta) { window.history.replaceState(null, '', window.location.pathname); if (vuelta === 'ok') setModal('bienvenida'); }
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Al entrar: junta este celular con la nube y revisa Plus (reintenta un poco porque el aviso de Stripe puede tardar).
+  useEffect(() => {
+    if (!uid) return undefined;
+    let vivo = true;
+    sincronizarAlEntrar(uid, cargar()).then((unido) => { if (vivo) actualizar(() => unido); }).catch(() => {});
+    setModal((m) => (m === 'cuenta-plus' ? 'plus' : m === 'entrar' ? null : m));
+    let intentos = 0;
+    const revisar = () => consultarPlus(sesion).then((p) => {
+      if (!vivo) return;
+      setPlus({ ...p, uid });
+      if (!p.plus && modal === 'bienvenida' && intentos++ < 5) setTimeout(revisar, 3000);
+    }).catch(() => {});
+    revisar();
+    return () => { vivo = false; };
+  }, [uid]);
+
+  // Respaldo automático unos segundos después de cada cambio.
+  useEffect(() => {
+    if (!uid || !estado.profile) return undefined;
+    const t = setTimeout(() => subirPerfil(uid, estado).catch(() => {}), 2500);
+    return () => clearTimeout(t);
+  }, [estado, uid]);
+
+  // Tema de color (Plus).
+  useEffect(() => {
+    const tema = THEMES.find((t) => t.id === (tienePlus ? estado.theme : 'night')) || THEMES[0];
+    const raiz = document.documentElement;
+    for (const t of THEMES) for (const k of Object.keys(t.vars)) raiz.style.removeProperty(k);
+    for (const [k, v] of Object.entries(tema.vars)) raiz.style.setProperty(k, v);
+  }, [estado.theme, tienePlus]);
+
+  const abrirPlus = () => setModal('plus');
+  const modales = (
+    <>
+      {(modal === 'cuenta' || modal === 'entrar' || modal === 'cuenta-plus') && (
+        <CuentaModal sesion={sesion} plus={plus} motivo={modal === 'cuenta-plus' ? 'plus' : null} modoInicial={modal === 'entrar' ? 'entrar' : 'crear'} onCerrar={() => setModal(null)} onPlus={() => setModal('plus')} />
+      )}
+      {modal === 'plus' && <PlusModal sesion={sesion} plus={tienePlus ? plus : null} onCerrar={() => setModal(null)} onNecesitaCuenta={() => setModal('cuenta-plus')} />}
+      {modal === 'nueva-clave' && <NuevaContrasena onListo={() => setModal(null)} />}
+      {modal === 'bienvenida' && (
+        <Modal onCerrar={() => setModal(null)}>
+          <div className="plus-sello">✦</div>
+          <h2 className="hoja-titulo center">{tienePlus ? 'Welcome to Astra Plus' : 'Almost there…'}</h2>
+          <p className="lead center">{tienePlus ? 'Your 3-card spread, week ahead and monthly theme are unlocked.' : 'We are confirming your payment. This takes a few seconds.'}</p>
+          <button className="btn" onClick={() => setModal(null)}>Continue ✦</button>
+        </Modal>
+      )}
+    </>
+  );
 
   // Racha diaria con un día de descanso por semana; los logros se celebran una sola vez.
   useEffect(() => {
@@ -33,17 +105,17 @@ export default function App() {
     else if (usedRest) setCelebrar({ tipo: 'descanso' });
   }, [estado.profile, hoy]);
 
-  if (!estado.profile) return <Onboarding onListo={(profile) => actualizar({ profile })} />;
+  if (!estado.profile) return <>{modales}<Onboarding onListo={(profile) => actualizar({ profile: { ...profile, updatedAt: new Date().toISOString() } })} onEntrar={() => setModal('entrar')} /></>;
 
   return (
     <div className="app">
       <div className="stars" aria-hidden />
       <main className="contenido">
-        {tab === 'today' && <Today estado={estado} actualizar={actualizar} irA={setTab} />}
+        {tab === 'today' && <Today estado={estado} actualizar={actualizar} irA={setTab} tienePlus={tienePlus} abrirPlus={abrirPlus} />}
         {tab === 'manifest' && <Manifest estado={estado} actualizar={actualizar} />}
-        {tab === 'moon' && <Moon estado={estado} actualizar={actualizar} />}
+        {tab === 'moon' && <Moon estado={estado} actualizar={actualizar} tienePlus={tienePlus} abrirPlus={abrirPlus} />}
         {tab === 'journal' && <Journal estado={estado} actualizar={actualizar} />}
-        {tab === 'me' && <Me estado={estado} actualizar={actualizar} />}
+        {tab === 'me' && <Me estado={estado} actualizar={actualizar} tienePlus={tienePlus} abrirPlus={abrirPlus} sesion={sesion} abrirCuenta={() => setModal('cuenta')} />}
       </main>
       <nav className="tabs">
         {[['today', '☾', 'Today'], ['manifest', '✦', 'Manifest'], ['moon', '◐', 'Moon'], ['journal', '✎', 'Journal'], ['me', '◎', 'Me']].map(([k, i, t]) => (
@@ -51,6 +123,7 @@ export default function App() {
         ))}
       </nav>
       {celebrar && <Celebracion datos={celebrar} onCerrar={() => setCelebrar(null)} />}
+      {modales}
     </div>
   );
 }
@@ -80,7 +153,7 @@ function Celebracion({ datos, onCerrar }) {
   );
 }
 
-function Onboarding({ onListo }) {
+function Onboarding({ onListo, onEntrar }) {
   const [paso, setPaso] = useState(0);
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
@@ -99,6 +172,7 @@ function Onboarding({ onListo }) {
             <p className="lead">Your daily card, reading and rituals — written for who you are becoming.</p>
             <label className="campo">What should we call you?<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" maxLength={30} autoComplete="given-name" /></label>
             <button className="btn" disabled={!name.trim()} onClick={() => setPaso(1)}>Begin</button>
+            <button className="link" style={{ marginTop: 16 }} onClick={onEntrar}>Already have an account? Sign in</button>
           </>
         )}
         {paso === 1 && (
@@ -136,7 +210,7 @@ function Onboarding({ onListo }) {
 
 /* ============================= TODAY ============================= */
 
-function Today({ estado, actualizar, irA }) {
+function Today({ estado, actualizar, irA, tienePlus, abrirPlus }) {
   const { profile } = estado;
   const hoy = localDateKey();
   const r = useMemo(() => dailyReading(profile), [profile, hoy]);
@@ -160,6 +234,8 @@ function Today({ estado, actualizar, irA }) {
       </header>
 
       <CartaDelDia estado={estado} actualizar={actualizar} />
+
+      {tienePlus ? <TiradaTres profile={profile} /> : <Bloqueado eyebrow="3-card spread" titulo="Past · Present · Next step" texto="A deeper daily spread that shows what shaped today and where to put your energy." onAbrir={abrirPlus} />}
 
       {hora >= 17 && !estado.checkins?.[hoy] && (
         <button className="card nudge" onClick={() => irA('journal')}>
@@ -196,6 +272,8 @@ function Today({ estado, actualizar, irA }) {
           <span className="flecha">→</span>
         </button>
       )}
+
+      {tienePlus ? <Semana profile={profile} /> : new Date().getDay() === 1 && <Bloqueado eyebrow="Your week ahead" titulo="Your best days this week" texto="See your best days for love, work and rest, with a theme for the week." onAbrir={abrirPlus} />}
 
       <section className="card">
         <p className="eyebrow">Your aligned action</p>
@@ -297,7 +375,7 @@ function Manifest({ estado, actualizar }) {
         {editando ? (
           <>
             <textarea className="area" value={nueva} onChange={(e) => setNueva(e.target.value)} rows={3} maxLength={160} />
-            <button className="btn" onClick={() => { actualizar((p) => ({ ...p, profile: { ...p.profile, intention: nueva.trim() || intencion } })); setEditando(false); }}>Save intention</button>
+            <button className="btn" onClick={() => { actualizar((p) => ({ ...p, profile: { ...p.profile, intention: nueva.trim() || intencion, updatedAt: new Date().toISOString() } })); setEditando(false); }}>Save intention</button>
           </>
         ) : (
           <>
@@ -340,7 +418,7 @@ function Manifest({ estado, actualizar }) {
 
 /* ============================= MOON ============================= */
 
-function Moon({ estado, actualizar }) {
+function Moon({ estado, actualizar, tienePlus, abrirPlus }) {
   const ahora = new Date();
   const fase = moonPhase(ahora);
   const eventos = nextMoonEvents(ahora, 4);
@@ -370,6 +448,8 @@ function Moon({ estado, actualizar }) {
         <p className="big center">{fase.illumination}% illuminated</p>
         <p className="muted center">The {fase.name.toLowerCase()} invites you to {fase.energy}.</p>
       </section>
+
+      {tienePlus ? <TemaMes profile={estado.profile} /> : <Bloqueado eyebrow="Monthly theme" titulo="The energy of your month" texto="A theme for the whole month with its key moon dates and how to work with them." onAbrir={abrirPlus} />}
 
       {tipoRitual ? (
         <section className="card ritual-luna">
@@ -533,7 +613,7 @@ function Constelacion({ estado }) {
 
 /* ============================= ME ============================= */
 
-function Me({ estado, actualizar }) {
+function Me({ estado, actualizar, tienePlus, abrirPlus, sesion, abrirCuenta }) {
   const { profile } = estado;
   const sign = signFor(profile.birthday);
   const [otro, setOtro] = useState('leo');
@@ -545,6 +625,17 @@ function Me({ estado, actualizar }) {
   return (
     <>
       <header className="top"><p className="eyebrow">{sign?.element} sign</p><h1>{sign?.glyph} {profile.name}</h1></header>
+      <button className={`card cuenta-card ${tienePlus ? 'plus' : ''}`} onClick={abrirCuenta}>
+        <span className="cuenta-icono">{tienePlus ? '✦' : sesion ? '☁︎' : '🔒'}</span>
+        <span className="cuenta-texto"><b>{tienePlus ? 'Astra Plus' : sesion ? 'Backed up' : 'Save your progress'}</b><small>{sesion ? sesion.user.email : 'Free account · use Astra on any device'}</small></span>
+        <span className="flecha">→</span>
+      </button>
+      {!tienePlus && (
+        <button className="card plus-banner" onClick={abrirPlus}>
+          <span><b>Astra Plus</b><small>3-card spread, week ahead, monthly theme and more · 7 days free</small></span>
+          <span className="flecha">→</span>
+        </button>
+      )}
       <section className="card">
         <p className="big">You are {sign?.traits}.</p>
         <p>Your gift is {sign?.gift}. When you honor it, everything flows more easily.</p>
@@ -578,9 +669,24 @@ function Me({ estado, actualizar }) {
       </section>
 
       <section className="card">
+        <p className="eyebrow">App theme</p>
+        <div className="temas">
+          {THEMES.map((t) => {
+            const bloqueado = t.plus && !tienePlus;
+            const activo = (estado.theme || 'night') === t.id && !bloqueado;
+            return (
+              <button key={t.id} className={`tema ${activo ? 'on' : ''}`} onClick={() => (bloqueado ? abrirPlus() : actualizar((p) => ({ ...p, theme: t.id })))}>
+                <span className="muestra-tema" style={{ background: `linear-gradient(135deg, ${t.vars['--night'] || '#120E24'}, ${t.vars['--gold'] || '#E7C77B'})` }} />
+                {t.name}{bloqueado ? ' 🔒' : ''}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <section className="card">
         <p className="eyebrow">Your focus</p>
         <div className="focus-grid">
-          {FOCUSES.map((f) => <button key={f.id} className={`chip ${profile.focus === f.id ? 'on' : ''}`} onClick={() => actualizar((p) => ({ ...p, profile: { ...p.profile, focus: f.id } }))}><span>{f.emoji}</span>{f.name}</button>)}
+          {FOCUSES.map((f) => <button key={f.id} className={`chip ${profile.focus === f.id ? 'on' : ''}`} onClick={() => actualizar((p) => ({ ...p, profile: { ...p.profile, focus: f.id, updatedAt: new Date().toISOString() } }))}><span>{f.emoji}</span>{f.name}</button>)}
         </div>
       </section>
       <section className="card">
@@ -591,6 +697,7 @@ function Me({ estado, actualizar }) {
         {compat && (
           <>
             <p className="score">{compat.score}%</p><p>{compat.note}</p>
+            {tienePlus ? <CompatFondo a={sign} b={otroSigno} /> : <button className="link" style={{ margin: '4px 0 6px' }} onClick={abrirPlus}>See the deep compatibility (Plus) →</button>}
             <button className="btn ghost" onClick={() => compartirTarjeta(historiaCompat(sign, otroSigno, compat))}>Send to them ↗</button>
           </>
         )}
@@ -601,6 +708,62 @@ function Me({ estado, actualizar }) {
         <button className="link danger" onClick={() => { if (window.confirm('Delete your profile, journal and rituals from this device?')) { localStorage.removeItem(CLAVE); window.location.reload(); } }}>Delete my data</button>
       </section>
     </>
+  );
+}
+
+/* ============================= PLUS ============================= */
+
+function TiradaTres({ profile }) {
+  const tirada = threeCardSpread(profile);
+  return (
+    <section className="card tirada">
+      <p className="eyebrow">Your 3-card spread · Plus</p>
+      <div className="tres">
+        {tirada.map(({ posicion, carta }) => (
+          <div key={posicion} className="tres-carta"><small>{posicion}</small><span>{carta.emoji}</span><b>{carta.name}</b></div>
+        ))}
+      </div>
+      {tirada.map(({ posicion, pregunta, carta }) => <p key={posicion}><b>{posicion}</b> — <span className="muted">{pregunta}.</span> {carta.message}</p>)}
+    </section>
+  );
+}
+
+function Semana({ profile }) {
+  const w = weeklyForecast(profile);
+  return (
+    <section className="card">
+      <p className="eyebrow">Your week ahead · Plus</p>
+      <p className="big">{w.tema}</p>
+      <div className="grid3 sin-margen">
+        {w.mejores.map(([emoji, que, dia]) => <div key={que} className="mini"><span>{emoji} {que}</span><b>{dia.slice(0, 3)}</b></div>)}
+      </div>
+      <p style={{ marginTop: 12 }}>{w.consejo}</p>
+      {w.signo && <p className="muted">{w.signo}</p>}
+    </section>
+  );
+}
+
+function TemaMes({ profile }) {
+  const m = monthlyTheme(profile);
+  return (
+    <section className="card reading">
+      <p className="eyebrow">{new Date().toLocaleDateString('en-US', { month: 'long' })} theme · Plus</p>
+      <h2>{m.nombre}</h2>
+      <p style={{ marginTop: 8 }}>{m.texto}</p>
+      {m.lunas.map((l) => <p key={l.date} className="muted small">{l.emoji} {l.name} · {fechaCorta(l.date)} — {l.type === 'new' ? 'set your intentions' : 'release what is heavy'}</p>)}
+    </section>
+  );
+}
+
+function CompatFondo({ a, b }) {
+  const d = deepCompatibility(a, b);
+  if (!d) return null;
+  return (
+    <div className="revisar">
+      <p><b>Strengths</b> — {d.fortalezas}</p>
+      <p><b>Friction</b> — {d.friccion}</p>
+      <p><b>How to love well</b> — {d.consejo}</p>
+    </div>
   );
 }
 

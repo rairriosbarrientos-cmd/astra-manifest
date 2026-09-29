@@ -97,3 +97,41 @@ test('streak keeps going with one rest day per week and never goes below 1', asy
   assert.deepEqual(monthStars(estado.checkins, '2026-09-27'), st);
   assert.ok(st.every((x) => x.x > 0 && x.x < 100 && x.y > 0 && x.y < 100));
 });
+
+test('merge keeps progress from both devices', async () => {
+  const { fusionarEstados } = await import('../src/fusion.js');
+  const cel = { profile: { name: 'Ana', updatedAt: '2026-09-28T10:00' }, cards: { '2026-09-27': 'sun' }, checkins: { '2026-09-27': { mood: 4, win: 'Gym' } }, signs: [{ id: 'a', date: '2026-09-27', text: 'x' }], badges: [3], streak: { last: '2026-09-28', count: 2, best: 2 } };
+  const nube = { profile: { name: 'Ana M', updatedAt: '2026-09-20T10:00' }, cards: { '2026-09-20': 'moon', '2026-09-27': 'sun' }, checkins: { '2026-09-27': { mood: 4 } }, signs: [{ id: 'b', date: '2026-09-20', text: 'y' }], badges: [3, 7], streak: { last: '2026-09-21', count: 9, best: 9 } };
+  const r = fusionarEstados(cel, nube);
+  assert.equal(r.profile.name, 'Ana');
+  assert.deepEqual(Object.keys(r.cards).sort(), ['2026-09-20', '2026-09-27']);
+  assert.equal(r.checkins['2026-09-27'].win, 'Gym');
+  assert.deepEqual(r.signs.map((s) => s.id), ['b', 'a']);
+  assert.deepEqual(r.badges, [3, 7]);
+  assert.equal(r.streak.count, 2); assert.equal(r.streak.best, 9);
+  assert.equal(fusionarEstados({}, nube), nube);
+  assert.equal(fusionarEstados(cel, {}), cel);
+});
+
+test('plus content is stable and well formed', async () => {
+  const { threeCardSpread, weeklyForecast, monthlyTheme, deepCompatibility, weekKeyOf } = await import('../src/plus.js');
+  const p = { name: 'Maya', birthday: '1994-07-30', focus: 'career' };
+  const s1 = threeCardSpread(p, new Date(2026, 8, 28, 9));
+  const s2 = threeCardSpread(p, new Date(2026, 8, 28, 22));
+  assert.deepEqual(s1.map((x) => x.carta.id), s2.map((x) => x.carta.id));
+  assert.equal(new Set(s1.map((x) => x.carta.id)).size, 3);
+  assert.equal(weekKeyOf(new Date(2026, 8, 30)), '2026-09-28');
+  const w = weeklyForecast(p, new Date(2026, 8, 30));
+  assert.deepEqual(w, weeklyForecast(p, new Date(2026, 9, 4)));
+  assert.equal(new Set(w.mejores.map((m) => m[2])).size, 3);
+  const m = monthlyTheme(p, new Date(2026, 9, 10));
+  assert.ok(m.nombre && m.lunas.every((l) => l.date.startsWith('2026-10')) && m.lunas.length >= 1);
+  const { SIGNS } = await import('../src/astro.js');
+  for (const a of SIGNS) for (const b of SIGNS) assert.ok(deepCompatibility(a, b).consejo);
+});
+
+test('plus copy never promises money, health outcomes or uses fear', async () => {
+  const fs = await import('node:fs');
+  const texto = fs.readFileSync(new URL('../src/plus.js', import.meta.url), 'utf8').toLowerCase();
+  for (const prohibido of ['guarantee', 'cure', 'you will win', 'curse', 'bad luck', 'blocked energy', 'or else', 'last chance']) assert.ok(!texto.includes(prohibido), prohibido);
+});

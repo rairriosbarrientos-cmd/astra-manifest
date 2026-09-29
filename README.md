@@ -21,10 +21,21 @@ Los textos (`src/contenido.js`) usan frases universales y cálidas, como hacen C
 - **Sin promesas** de dinero, salud o eventos concretos.
 - Incluye el 988 (línea de crisis en EE.UU.) en "Me".
 
-## Cómo ganar dinero (siguiente paso)
-1. **Astra Plus** ($4.99/mes o $29.99/año): lectura semanal extendida, luna nueva/llena con ritual guiado, más temas de afirmaciones, widgets. Cobro con Stripe (web) o, si se empaqueta para App Store/Google Play, con RevenueCat.
-2. **Contenido para TikTok/Instagram:** la tarjeta compartible + videos "what your sign needs to hear today".
-3. **Tienda:** diarios de manifestación imprimibles (PDF) o físicos vía print-on-demand.
+## Cuentas y Astra Plus (cómo gana dinero)
+- **Cuenta gratis (opcional):** correo y contraseña. Respalda cartas, diario, rituales y racha en Supabase (`astra_perfiles`, cada quien solo ve la suya) y los junta al entrar desde otro celular.
+- **Astra Plus:** $4.99/mes o $29.99/año, **7 días gratis** la primera vez. Incluye tirada diaria de 3 cartas, semana por delante, tema del mes, compatibilidad a fondo y temas de color. Lo gratis (carta del día, lectura, rituales, luna, diario, rachas) sigue gratis.
+- Se cancela desde **Me → Account → Manage or cancel subscription** (portal de Stripe). Precio y fin de la prueba siempre visibles.
+
+### Encender los cobros (una sola vez)
+1. Supabase: aplica `supabase/migrations/001_astra.sql` (ya aplicada en el proyecto actual).
+2. Stripe → Developers → API keys → copia la **Secret key**.
+3. Stripe → Developers → Webhooks → **Add endpoint** `https://TU-SITIO/api/stripe-webhook` con los eventos `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Copia el **Signing secret** (`whsec_...`).
+4. Stripe → Settings → Billing → **Customer portal** → activa "Cancel subscriptions" y guarda (sin esto el botón de administrar no abre).
+5. Netlify → Site configuration → Environment variables: `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`. Vuelve a publicar.
+6. Prueba con llaves `sk_test_` y la tarjeta `4242 4242 4242 4242`; luego cambia a las `sk_live_`.
+7. Supabase → Authentication → URL Configuration → agrega la dirección de Astra en **Redirect URLs** (para confirmar correo y recuperar contraseña).
+
+Sin llaves de Stripe la app funciona igual y el botón de Plus avisa que los pagos aún no están activos.
 
 ## Publicar
 Netlify: conecta el repo (build `npm run build`, carpeta `dist`; viene en `netlify.toml`). No necesita variables.
